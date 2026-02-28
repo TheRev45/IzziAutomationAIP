@@ -1,0 +1,12 @@
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationCommonAbstractions\bin\Debug\net8.0\IzziAutomationCommonAbstractions.deps.json
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationCommonAbstractions\bin\Debug\net8.0\IzziAutomationCommonAbstractions.dll
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationCommonAbstractions\bin\Debug\net8.0\IzziAutomationCommonAbstractions.pdb
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationCommonAbstractions\obj\Debug\net8.0\IzziAutomationCommonAbstractions.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationCommonAbstractions\obj\Debug\net8.0\IzziAutomationCommonAbstractions.AssemblyInfoInputs.cache
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationCommonAbstractions\obj\Debug\net8.0\IzziAutomationCommonAbstractions.AssemblyInfo.cs
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationCommonAbstractions\obj\Debug\net8.0\IzziAutomationCommonAbstractions.csproj.CoreCompileInputs.cache
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationCommonAbstractions\obj\Debug\net8.0\IzziAutomationCommonAbstractions.sourcelink.json
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationCommonAbstractions\obj\Debug\net8.0\IzziAutomationCommonAbstractions.dll
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationCommonAbstractions\obj\Debug\net8.0\refint\IzziAutomationCommonAbstractions.dll
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationCommonAbstractions\obj\Debug\net8.0\IzziAutomationCommonAbstractions.pdb
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationCommonAbstractions\obj\Debug\net8.0\ref\IzziAutomationCommonAbstractions.dll

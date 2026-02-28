@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "Bv86JwHfRqM=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\TestRunner\\TestRunner.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Pedro\\.nuget\\packages\\afonsomtsm.result\\1.0.0\\afonsomtsm.result.1.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}

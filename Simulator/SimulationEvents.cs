@@ -177,8 +177,25 @@ public class SetupCompletedEvent : SimEvent
         EventQueue eventQueue,
         DateTimeOffset now)
     {
-        // Pega no primeiro item pendente (FIFO)
-        var nextItem = queue.PendingItems.First();
+        // Skip items already claimed by another resource in the same batch tick.
+        // Multiple machines can set up the same queue simultaneously; without this
+        // guard they would all pick PendingItems[0] and then crash when Apply()
+        // tries to remove an already-removed item.
+        var claimed = state.Resources.Values
+            .Where(r => r.CurrentItemId.HasValue)
+            .Select(r => r.CurrentItemId!.Value)
+            .ToHashSet();
+
+        var nextItem = queue.PendingItems.FirstOrDefault(item => !claimed.Contains(item.Id));
+
+        if (nextItem is null)
+        {
+            // All remaining pending items are currently being processed by other
+            // resources — go Idle and let Worker re-trigger Izzi when they finish.
+            resource.CurrentState  = SimResourceState.Idle;
+            resource.ProcessEnabled = false;
+            return;
+        }
 
         // Calcula duração média do item baseada no histórico
         var avgDuration = queue.FinishedTasks.Any()

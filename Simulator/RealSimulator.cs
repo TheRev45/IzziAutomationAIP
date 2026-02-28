@@ -20,8 +20,8 @@ public class RealSimulator : SimulatorEngine
         SimulatorConfiguration config)
         : base(clock, state, eventQueue, config)
     {
-        // Worker observa estado e chama Izzi quando necessário
-        _worker = new Worker(state, eventQueue, clock, config);
+        var izziCore = IzziCoreBuilder.Build(config.IzziDiscTime);
+        _worker = new Worker(state, eventQueue, clock, config, izziCore);
     }
 
     /// <summary>

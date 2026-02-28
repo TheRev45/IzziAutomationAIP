@@ -8,9 +8,9 @@ namespace IzziAutomationSimulator;
 /// </summary>
 public abstract class SimulatorEngine
 {
-    protected readonly SimulationClock Clock;
-    protected readonly SimulationState State;
-    protected readonly EventQueue EventQueue;
+    protected internal readonly SimulationClock Clock;
+    protected internal readonly SimulationState State;
+    protected internal readonly EventQueue EventQueue;
     protected readonly SimulatorConfiguration Config;
 
     protected SimulatorEngine(

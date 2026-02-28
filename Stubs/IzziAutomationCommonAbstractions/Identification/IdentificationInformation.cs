@@ -1,0 +1,3 @@
+namespace IzziAutomationCommonAbstractions.Identification;
+
+public abstract record IdentificationInformation;

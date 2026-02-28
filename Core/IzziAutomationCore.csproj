@@ -13,11 +13,16 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\IzziAutomationDatabase\IzziAutomationDatabase.csproj" />
+      <ProjectReference Include="..\Stubs\IzziAutomationDatabase\IzziAutomationDatabase.csproj" />
+      <ProjectReference Include="..\Stubs\IzziAutomationCommonAbstractions\IzziAutomationCommonAbstractions.csproj" />
     </ItemGroup>
 
     <ItemGroup>
       <Folder Include="Benefits\Services\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <InternalsVisibleTo Include="IzziAutomationSimulator" />
     </ItemGroup>
 
 </Project>

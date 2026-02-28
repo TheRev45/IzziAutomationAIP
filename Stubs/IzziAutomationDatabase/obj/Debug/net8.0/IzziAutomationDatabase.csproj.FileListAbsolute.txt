@@ -1,0 +1,16 @@
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationDatabase\bin\Debug\net8.0\IzziAutomationDatabase.deps.json
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationDatabase\bin\Debug\net8.0\IzziAutomationDatabase.dll
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationDatabase\bin\Debug\net8.0\IzziAutomationDatabase.pdb
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationDatabase\bin\Debug\net8.0\IzziAutomationCommonAbstractions.dll
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationDatabase\bin\Debug\net8.0\IzziAutomationCommonAbstractions.pdb
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationDatabase\obj\Debug\net8.0\IzziAutomationDatabase.csproj.AssemblyReference.cache
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationDatabase\obj\Debug\net8.0\IzziAutomationDatabase.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationDatabase\obj\Debug\net8.0\IzziAutomationDatabase.AssemblyInfoInputs.cache
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationDatabase\obj\Debug\net8.0\IzziAutomationDatabase.AssemblyInfo.cs
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationDatabase\obj\Debug\net8.0\IzziAutomationDatabase.csproj.CoreCompileInputs.cache
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationDatabase\obj\Debug\net8.0\IzziAutomationDatabase.sourcelink.json
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationDatabase\obj\Debug\net8.0\IzziAuto.95CF488B.Up2Date
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationDatabase\obj\Debug\net8.0\IzziAutomationDatabase.dll
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationDatabase\obj\Debug\net8.0\refint\IzziAutomationDatabase.dll
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationDatabase\obj\Debug\net8.0\IzziAutomationDatabase.pdb
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\Stubs\IzziAutomationDatabase\obj\Debug\net8.0\ref\IzziAutomationDatabase.dll

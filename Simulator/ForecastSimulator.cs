@@ -22,7 +22,8 @@ public class ForecastSimulator : SimulatorEngine
         SimulatorConfiguration config)
         : base(clock, state, eventQueue, config)
     {
-        _worker = new Worker(state, eventQueue, clock, config);
+        var izziCore = IzziCoreBuilder.Build(config.IzziDiscTime);
+        _worker = new Worker(state, eventQueue, clock, config, izziCore);
         _forecastStartTime = clock.Now;
     }
 

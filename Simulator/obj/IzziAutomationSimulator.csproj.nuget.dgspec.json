@@ -1,0 +1,295 @@
+{
+  "format": 1,
+  "restore": {
+    "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Simulator\\IzziAutomationSimulator.csproj": {}
+  },
+  "projects": {
+    "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Core\\IzziAutomationCore.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Core\\IzziAutomationCore.csproj",
+        "projectName": "IzziAutomationCore",
+        "projectPath": "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Core\\IzziAutomationCore.csproj",
+        "packagesPath": "C:\\Users\\Pedro\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Core\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\Pedro\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Stubs\\IzziAutomationCommonAbstractions\\IzziAutomationCommonAbstractions.csproj": {
+                "projectPath": "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Stubs\\IzziAutomationCommonAbstractions\\IzziAutomationCommonAbstractions.csproj"
+              },
+              "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Stubs\\IzziAutomationDatabase\\IzziAutomationDatabase.csproj": {
+                "projectPath": "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Stubs\\IzziAutomationDatabase\\IzziAutomationDatabase.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Afonsomtsm.Result": {
+              "target": "Package",
+              "version": "[1.0.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.301/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Simulator\\IzziAutomationSimulator.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Simulator\\IzziAutomationSimulator.csproj",
+        "projectName": "IzziAutomationSimulator",
+        "projectPath": "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Simulator\\IzziAutomationSimulator.csproj",
+        "packagesPath": "C:\\Users\\Pedro\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Simulator\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\Pedro\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Core\\IzziAutomationCore.csproj": {
+                "projectPath": "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Core\\IzziAutomationCore.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Afonsomtsm.Result": {
+              "target": "Package",
+              "version": "[1.0.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.301/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Stubs\\IzziAutomationCommonAbstractions\\IzziAutomationCommonAbstractions.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Stubs\\IzziAutomationCommonAbstractions\\IzziAutomationCommonAbstractions.csproj",
+        "projectName": "IzziAutomationCommonAbstractions",
+        "projectPath": "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Stubs\\IzziAutomationCommonAbstractions\\IzziAutomationCommonAbstractions.csproj",
+        "packagesPath": "C:\\Users\\Pedro\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Stubs\\IzziAutomationCommonAbstractions\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\Pedro\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.301/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Stubs\\IzziAutomationDatabase\\IzziAutomationDatabase.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Stubs\\IzziAutomationDatabase\\IzziAutomationDatabase.csproj",
+        "projectName": "IzziAutomationDatabase",
+        "projectPath": "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Stubs\\IzziAutomationDatabase\\IzziAutomationDatabase.csproj",
+        "packagesPath": "C:\\Users\\Pedro\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Stubs\\IzziAutomationDatabase\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\Pedro\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Stubs\\IzziAutomationCommonAbstractions\\IzziAutomationCommonAbstractions.csproj": {
+                "projectPath": "C:\\Users\\Pedro\\Documents\\IzziProjectsAIP\\IzziAutomationAIP\\Stubs\\IzziAutomationCommonAbstractions\\IzziAutomationCommonAbstractions.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.301/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

@@ -45,8 +45,6 @@ body { font-family: 'Consolas', 'Courier New', monospace; background: #0d1117; c
 
 /* ── GANTT SECTION ─────────────────────────── */
 #gantt-row {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 1px; background: #30363d;
     flex: 1; min-height: 0;
 }
 .gantt-pane {
@@ -144,12 +142,8 @@ canvas.gantt { flex: 1; min-height: 0; width: 100%; display: block; }
     <div id="left">
         <div id="gantt-row">
             <div class="gantt-pane">
-                <div class="pane-title">Digital Twin — Real Simulation</div>
-                <canvas class="gantt" id="gantt-real"></canvas>
-            </div>
-            <div class="gantt-pane">
-                <div class="pane-title">Izzi Forecast</div>
-                <canvas class="gantt" id="gantt-forecast"></canvas>
+                <div class="pane-title">Digital Twin + Izzi Forecast — Unified Timeline</div>
+                <canvas class="gantt" id="gantt-unified"></canvas>
             </div>
         </div>
 

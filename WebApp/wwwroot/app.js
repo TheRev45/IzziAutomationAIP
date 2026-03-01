@@ -88,9 +88,10 @@ function renderAll(s) {
     document.getElementById('btn-start').disabled = s.isRunning || s.isFinished;
     document.getElementById('btn-pause').disabled = !s.isRunning;
 
-    renderGantt(document.getElementById('gantt-real'), s.ganttBlocks, s.clockMs, s.startMs, s.endMs, s.resources);
-    renderGantt(document.getElementById('gantt-forecast'), s.forecastGanttBlocks || [], s.clockMs, s.startMs, s.endMs, s.resources);
-    shadeForecastPast(document.getElementById('gantt-forecast'), s.clockMs, s.startMs, s.endMs);
+    renderUnifiedGantt(
+        document.getElementById('gantt-unified'),
+        s.ganttBlocks, s.forecastGanttBlocks || [],
+        s.clockMs, s.startMs, s.endMs, s.resources);
     renderMachines(s.resources);
     renderQueues(s.queues);
     renderLegend(s.queues);
@@ -99,10 +100,11 @@ function renderAll(s) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// Gantt chart (canvas)
+// Unified Gantt — Digital Twin (solid, left of Now)
+//               + Izzi Forecast (transparent+dashed, right of Now)
 // ═══════════════════════════════════════════════════════════
 
-function renderGantt(canvas, blocks, clockMs, startMs, endMs, resources) {
+function renderUnifiedGantt(canvas, realBlocks, forecastBlocks, clockMs, startMs, endMs, resources) {
     const dpr  = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
     if (rect.width < 10 || rect.height < 10) return;
@@ -110,62 +112,72 @@ function renderGantt(canvas, blocks, clockMs, startMs, endMs, resources) {
     canvas.width  = rect.width  * dpr;
     canvas.height = rect.height * dpr;
 
-    const ctx  = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d');
     ctx.scale(dpr, dpr);
     const W = rect.width, H = rect.height;
 
-    const MACHINES   = (resources || []).map(r => r.name);
-    const LEFT       = 36;
-    const RIGHT      = 6;
-    const TOP        = 4;
-    const BOTTOM     = 18;
-    const rowH       = (H - TOP - BOTTOM) / MACHINES.length;
-    const chartW     = W - LEFT - RIGHT;
-    const totalMs    = endMs - startMs;
-    const px         = chartW / totalMs;   // pixels per ms
+    const MACHINES = (resources || []).map(r => r.name);
+    const nRows    = Math.max(MACHINES.length, 1);
+    const LEFT     = 36;
+    const RIGHT    = 6;
+    const TOP      = 20;   // header zone for Now label
+    const BOTTOM   = 18;   // time-axis labels
+    const chartH   = H - TOP - BOTTOM;
+    const rowH     = chartH / nRows;
+    const chartW   = W - LEFT - RIGHT;
+    const totalMs  = endMs - startMs;
+    const px       = chartW / totalMs;
 
-    // Background
+    // ── Background ───────────────────────────────────────────
     ctx.fillStyle = '#0d1117';
     ctx.fillRect(0, 0, W, H);
 
-    // Row backgrounds
+    // ── Alternating row backgrounds ──────────────────────────
     MACHINES.forEach((_, i) => {
         ctx.fillStyle = i % 2 === 0 ? '#0f131a' : '#0d1117';
         ctx.fillRect(LEFT, TOP + i * rowH, chartW, rowH);
     });
 
-    // Grid lines every 5 minutes
-    const gridStep = 5 * 60 * 1000;
+    // ── Future-region tint (right of Now) ────────────────────
+    const nowX = LEFT + Math.max(0, Math.min(clockMs - startMs, totalMs)) * px;
+    if (nowX < W - RIGHT) {
+        ctx.fillStyle = 'rgba(88,166,255,0.035)';
+        ctx.fillRect(nowX, TOP, W - RIGHT - nowX, chartH);
+    }
+
+    // ── Time grid every 5 minutes ────────────────────────────
+    const gridStep  = 5 * 60 * 1000;
     const firstGrid = startMs + (gridStep - (startMs % gridStep)) % gridStep;
-    ctx.strokeStyle = '#21262d';
-    ctx.lineWidth = 1;
-    ctx.font = '9px Consolas';
-    ctx.fillStyle = '#4d5565';
-    ctx.textAlign = 'center';
+    ctx.setLineDash([]);
     for (let t = firstGrid; t <= endMs; t += gridStep) {
         const x = LEFT + (t - startMs) * px;
         if (x < LEFT || x > W - RIGHT) continue;
+        ctx.strokeStyle = '#21262d';
+        ctx.lineWidth   = 1;
         ctx.beginPath(); ctx.moveTo(x, TOP); ctx.lineTo(x, H - BOTTOM); ctx.stroke();
-        const d = new Date(t);
-        const lbl = d.getUTCHours().toString().padStart(2,'0') + ':' + d.getUTCMinutes().toString().padStart(2,'0');
-        ctx.fillStyle = '#4d5565';
+        const d   = new Date(t);
+        const lbl = d.getUTCHours().toString().padStart(2,'0') + ':' +
+                    d.getUTCMinutes().toString().padStart(2,'0');
+        ctx.fillStyle  = '#4d5565';
+        ctx.font       = '9px Consolas';
+        ctx.textAlign  = 'center';
         ctx.fillText(lbl, x, H - 4);
     }
 
-    // Machine labels
+    // ── Machine labels ───────────────────────────────────────
     ctx.textAlign = 'right';
-    ctx.font = 'bold 11px Consolas';
+    ctx.font      = 'bold 11px Consolas';
     MACHINES.forEach((m, i) => {
         ctx.fillStyle = '#6e7681';
         ctx.fillText(m, LEFT - 4, TOP + i * rowH + rowH / 2 + 4);
     });
 
-    // Gantt blocks
-    (blocks || []).forEach(b => {
+    // ── Digital Twin blocks — solid, clipped to left of Now ──
+    (realBlocks || []).forEach(b => {
         const row = MACHINES.indexOf(b.resource);
         if (row < 0) return;
         const bStart = Math.max(b.startMs, startMs);
-        const bEnd   = Math.min(b.endMs ?? clockMs, endMs);
+        const bEnd   = Math.min(b.endMs ?? clockMs, clockMs);   // hard-clip at Now
         if (bEnd <= bStart) return;
 
         const x  = LEFT + (bStart - startMs) * px;
@@ -176,51 +188,92 @@ function renderGantt(canvas, blocks, clockMs, startMs, endMs, resources) {
         ctx.fillStyle = b.color;
         ctx.fillRect(x, y, Math.max(bW, 1.5), bH);
 
-        // Queue label when wide enough
         if (bW > 22 && b.queue) {
             ctx.fillStyle = 'rgba(0,0,0,0.65)';
-            ctx.font = '9px Consolas';
+            ctx.font      = '9px Consolas';
             ctx.textAlign = 'center';
             ctx.fillText(b.queue, x + bW / 2, y + bH / 2 + 3);
         }
     });
 
-    // Current-time marker
+    // ── Forecast blocks — semi-transparent + dashed border ───
+    (forecastBlocks || []).forEach(b => {
+        const row = MACHINES.indexOf(b.resource);
+        if (row < 0) return;
+        const bStart = Math.max(b.startMs, clockMs);   // hard-clip at Now
+        const bEnd   = Math.min(b.endMs ?? endMs, endMs);
+        if (bEnd <= bStart) return;
+
+        const x  = LEFT + (bStart - startMs) * px;
+        const bW = (bEnd - bStart) * px;
+        const y  = TOP + row * rowH + 2;
+        const bH = rowH - 4;
+        const w  = Math.max(bW, 1.5);
+
+        ctx.globalAlpha = 0.42;
+        ctx.fillStyle   = b.color;
+        ctx.fillRect(x, y, w, bH);
+        ctx.globalAlpha = 1.0;
+
+        if (bW > 2) {
+            ctx.strokeStyle = b.color;
+            ctx.lineWidth   = 1;
+            ctx.setLineDash([3, 2]);
+            ctx.strokeRect(x + 0.5, y + 0.5, w - 1, bH - 1);
+            ctx.setLineDash([]);
+        }
+
+        if (bW > 30 && b.queue) {
+            ctx.fillStyle = 'rgba(255,255,255,0.55)';
+            ctx.font      = '9px Consolas';
+            ctx.textAlign = 'center';
+            ctx.fillText(b.queue, x + bW / 2, y + bH / 2 + 3);
+        }
+    });
+
+    // ── Now line — bold yellow vertical ──────────────────────
     if (clockMs >= startMs && clockMs <= endMs) {
-        const cx = LEFT + (clockMs - startMs) * px;
-        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([5, 3]);
-        ctx.beginPath(); ctx.moveTo(cx, TOP); ctx.lineTo(cx, H - BOTTOM); ctx.stroke();
+        const nx = LEFT + (clockMs - startMs) * px;
+
+        // Vertical line
+        ctx.strokeStyle = '#ffe066';
+        ctx.lineWidth   = 2;
         ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(nx, TOP);
+        ctx.lineTo(nx, H - BOTTOM);
+        ctx.stroke();
+
+        // Small downward triangle at top of line
+        ctx.fillStyle = '#ffe066';
+        ctx.beginPath();
+        ctx.moveTo(nx - 4, TOP);
+        ctx.lineTo(nx + 4, TOP);
+        ctx.lineTo(nx, TOP + 6);
+        ctx.closePath();
+        ctx.fill();
+
+        // Time label in a pill above the chart
+        const d      = new Date(clockMs);
+        const nowStr = d.getUTCHours().toString().padStart(2,'0')    + ':' +
+                       d.getUTCMinutes().toString().padStart(2,'0')  + ':' +
+                       d.getUTCSeconds().toString().padStart(2,'0');
+        ctx.font = 'bold 10px Consolas';
+        const tw = ctx.measureText(nowStr).width;
+        // Clamp pill so it stays inside chart
+        const lx = Math.max(LEFT + tw / 2 + 4, Math.min(nx, W - RIGHT - tw / 2 - 4));
+        ctx.fillStyle = 'rgba(13,17,23,0.92)';
+        ctx.fillRect(lx - tw / 2 - 4, 2, tw + 8, 14);
+        ctx.fillStyle = '#ffe066';
+        ctx.textAlign = 'center';
+        ctx.fillText(nowStr, lx, 12);
     }
 
-    // Border
+    // ── Chart border ──────────────────────────────────────────
     ctx.strokeStyle = '#21262d';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(LEFT, TOP, chartW, H - TOP - BOTTOM);
-}
-
-// Overlay the "past" region (left of Now) with a dark tint in the forecast pane,
-// making it visually clear that blocks only appear in the future portion.
-function shadeForecastPast(canvas, clockMs, startMs, endMs) {
-    const rect = canvas.getBoundingClientRect();
-    if (rect.width < 10 || rect.height < 10) return;
-
-    const LEFT      = 36;
-    const TOP       = 4;
-    const BOTTOM    = 18;
-    const chartW    = rect.width - LEFT - 6;
-    const totalMs   = endMs - startMs;
-    const pastMs    = Math.max(0, Math.min(clockMs - startMs, totalMs));
-    const pastWidth = pastMs / totalMs * chartW;
-
-    if (pastWidth <= 0) return;
-
-    const ctx = canvas.getContext('2d');
-    // renderGantt already called ctx.scale(dpr, dpr); coordinates are CSS pixels
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
-    ctx.fillRect(LEFT, TOP, pastWidth, rect.height - TOP - BOTTOM);
+    ctx.lineWidth   = 1;
+    ctx.setLineDash([]);
+    ctx.strokeRect(LEFT, TOP, chartW, chartH);
 }
 
 // ═══════════════════════════════════════════════════════════

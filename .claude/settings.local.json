@@ -5,7 +5,8 @@
       "Bash(dotnet run:*)",
       "Bash(pkill:*)",
       "Bash(taskkill:*)",
-      "Bash(cmd:*)"
+      "Bash(cmd:*)",
+      "Bash(powershell:*)"
     ]
   }
 }

@@ -305,7 +305,7 @@ public static class BluePrismConnector
                         Id              = Guid.NewGuid(),
                         QueueId         = queueGuid,
                         ResourceId      = Guid.NewGuid(),
-                        CompletedAt     = DateTimeOffset.MinValue,
+                        CompletedAt     = DateTimeOffset.UnixEpoch,  // MinValue would underflow in IzziStateAdapter.BuildFinishedTask (Loaded = CompletedAt - duration)
                         DurationSeconds = tmo.TotalSeconds,
                     }
                 },

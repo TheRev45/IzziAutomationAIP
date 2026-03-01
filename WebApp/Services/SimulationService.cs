@@ -239,7 +239,21 @@ public class SimulationService
             {
                 var tickStart = DateTime.UtcNow;
 
-                ProcessTick();
+                try
+                {
+                    ProcessTick();
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _isRunning  = false;
+                    _isFinished = true;
+                    AddEvent($"❌ TICK EXCEPTION: {ex.GetType().Name}: {ex.Message}");
+                    if (ex.InnerException is not null)
+                        AddEvent($"   inner: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}");
+                    AddEvent($"   at: {ex.StackTrace?.Split('\n').FirstOrDefault()?.Trim() ?? "unknown"}");
+                    await BroadcastStateForce();
+                    return;
+                }
 
                 // All waves injected + queues drained + no pending events → done
                 if (_nextWaveIndex >= _load.TaskWaves.Count

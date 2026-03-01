@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("IzziAutomationSimulator")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c2f83991eed9632aabd6d22ec1680e36c7adb8e7")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fe1310c46b5aa729b47f9873ad4b838d241dce40")]
 [assembly: System.Reflection.AssemblyProductAttribute("IzziAutomationSimulator")]
 [assembly: System.Reflection.AssemblyTitleAttribute("IzziAutomationSimulator")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

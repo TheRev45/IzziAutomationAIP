@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("IzziAutomationCommonAbstractions")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fe1310c46b5aa729b47f9873ad4b838d241dce40")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+03bbd995c164f972628e5cdeff99a1ee1646d7c4")]
 [assembly: System.Reflection.AssemblyProductAttribute("IzziAutomationCommonAbstractions")]
 [assembly: System.Reflection.AssemblyTitleAttribute("IzziAutomationCommonAbstractions")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

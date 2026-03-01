@@ -5,7 +5,6 @@ C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\WebApp\bin\Debug\net8
 C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\WebApp\bin\Debug\net8.0\IzziWebApp.runtimeconfig.json
 C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\WebApp\bin\Debug\net8.0\IzziWebApp.dll
 C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\WebApp\bin\Debug\net8.0\IzziWebApp.pdb
-C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\WebApp\bin\Debug\net8.0\ResultAndOption.dll
 C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\WebApp\bin\Debug\net8.0\IzziAutomationCommonAbstractions.dll
 C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\WebApp\bin\Debug\net8.0\IzziAutomationCore.dll
 C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\WebApp\bin\Debug\net8.0\IzziAutomationDatabase.dll
@@ -36,3 +35,4 @@ C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\WebApp\obj\Debug\net8
 C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\WebApp\obj\Debug\net8.0\IzziWebApp.pdb
 C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\WebApp\obj\Debug\net8.0\IzziWebApp.genruntimeconfig.cache
 C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\WebApp\obj\Debug\net8.0\ref\IzziWebApp.dll
+C:\Users\Pedro\Documents\IzziProjectsAIP\IzziAutomationAIP\WebApp\bin\Debug\net8.0\ResultAndOption.dll

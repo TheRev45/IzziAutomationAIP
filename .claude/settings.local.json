@@ -3,7 +3,9 @@
     "allow": [
       "Bash(dotnet build:*)",
       "Bash(dotnet run:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd:*)"
     ]
   }
 }

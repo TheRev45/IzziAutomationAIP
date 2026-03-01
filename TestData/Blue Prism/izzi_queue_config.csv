@@ -1,0 +1,9 @@
+queue_name,queue_bp_id,izzi_user,criticality,sla_minutes,avg_setup_time_seconds,avg_login_time_seconds,avg_logout_time_seconds,avg_item_time_seconds,min_resources,max_resources,must_run,force_max
+Queue_A,q0000001-0000-0000-0000-000000000001,UserA,5,30,60,30,20,60,0,5,false,false
+Queue_B,q0000001-0000-0000-0000-000000000002,UserA,5,45,60,30,20,120,0,5,false,false
+Queue_C,q0000001-0000-0000-0000-000000000003,UserA,4,60,60,30,20,180,0,5,false,false
+Queue_D,q0000001-0000-0000-0000-000000000004,UserA,4,60,60,30,20,120,0,5,false,false
+Queue_E,q0000001-0000-0000-0000-000000000005,UserB,3,90,60,30,20,240,0,5,false,false
+Queue_F,q0000001-0000-0000-0000-000000000006,UserB,3,120,60,30,20,180,0,5,false,false
+Queue_G,q0000001-0000-0000-0000-000000000007,UserB,2,120,60,30,20,300,0,5,false,false
+Queue_H,q0000001-0000-0000-0000-000000000008,UserB,1,180,60,30,20,360,0,5,false,false

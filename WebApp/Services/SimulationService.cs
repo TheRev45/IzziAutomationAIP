@@ -2,14 +2,15 @@ using IzziAutomationCore;
 using IzziAutomationCore.Queues.Entities;
 using IzziAutomationCore.Resources.Entities;
 using IzziAutomationSimulator;
+using IzziWebApp.Connectors.BluePrism;
 using IzziWebApp.Hubs;
 using Microsoft.AspNetCore.SignalR;
 
 namespace IzziWebApp.Services;
 
-// ═══════════════════════════════════════════════════════════════
-// DTOs (sent to browser via SignalR — all camelCased by default)
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// DTOs (camelCased by System.Text.Json for the browser)
+// ═══════════════════════════════════════════════════════════
 
 public record SimStateDto(
     string   Clock,
@@ -19,15 +20,16 @@ public record SimStateDto(
     bool     IsRunning,
     bool     IsFinished,
     double   Speed,
-    List<ResourceDto>    Resources,
-    List<QueueDto>       Queues,
-    List<GanttBlockDto>  GanttBlocks,
-    List<string>         Events,
-    MetricsDto           Metrics
+    List<ResourceDto>           Resources,
+    List<QueueDto>              Queues,
+    List<GanttBlockDto>         GanttBlocks,
+    List<string>                Events,
+    MetricsDto                  Metrics,
+    Dictionary<string, string>  QueueColors   // queueName → hex color
 );
 
-public record ResourceDto(string Name, string State, string? Queue, string? User);
-public record QueueDto(string Name, int Pending, int Completed);
+public record ResourceDto(string Name, string State, string? Queue, string? User, string? QueueColor);
+public record QueueDto(string Name, int Pending, int Completed, string Color);
 public record MetricsDto(Dictionary<string, double> TasksPerHour, Dictionary<string, double> Utilization);
 
 public class GanttBlockDto
@@ -40,97 +42,63 @@ public class GanttBlockDto
     public long?   EndMs     { get; init; }
 }
 
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // SimulationService
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 
 public class SimulationService
 {
     private readonly IHubContext<SimulationHub> _hub;
+    private readonly string                    _dataPath;
 
-    // ── Dataset identifiers (same as TestRunner) ────────────────
-    private static readonly Guid UserAId = new("0000aaaa-0000-0000-0000-000000000001");
-    private static readonly Guid UserBId = new("0000bbbb-0000-0000-0000-000000000001");
-    private static readonly Guid M1Id    = new("1111aaaa-0000-0000-0000-000000000001");
-    private static readonly Guid M2Id    = new("2222aaaa-0000-0000-0000-000000000001");
-    private static readonly Guid M3Id    = new("3333aaaa-0000-0000-0000-000000000001");
-    private static readonly Guid Q1Id    = new("11111111-0000-0000-0000-000000000001");
-    private static readonly Guid Q2Id    = new("22222222-0000-0000-0000-000000000001");
-    private static readonly Guid Q3Id    = new("33333333-0000-0000-0000-000000000001");
-    private static readonly Guid Q4Id    = new("44444444-0000-0000-0000-000000000001");
-    private static readonly Guid Q5Id    = new("55555555-0000-0000-0000-000000000001");
-
-    private static readonly Dictionary<Guid, string> Names = new()
+    // ── Colour palette (up to 10 queues) ────────────────────
+    private static readonly string[] ColorPalette =
     {
-        [UserAId] = "UserA", [UserBId] = "UserB",
-        [M1Id] = "M1",  [M2Id] = "M2",  [M3Id] = "M3",
-        [Q1Id] = "Q1",  [Q2Id] = "Q2",  [Q3Id] = "Q3",
-        [Q4Id] = "Q4",  [Q5Id] = "Q5",
+        "#e74c3c", "#3498db", "#2ecc71", "#f39c12", "#9b59b6",
+        "#1abc9c", "#e67e22", "#2980b9", "#27ae60", "#8e44ad",
     };
 
-    private static readonly Dictionary<Guid, (TimeSpan sla, int crit, TimeSpan setup, TimeSpan tmo, Guid user)> QDefs = new()
-    {
-        [Q1Id] = (TimeSpan.FromMinutes(2), 5, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1), UserAId),
-        [Q2Id] = (TimeSpan.FromMinutes(3), 4, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(2), UserAId),
-        [Q3Id] = (TimeSpan.FromMinutes(5), 3, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(3), UserAId),
-        [Q4Id] = (TimeSpan.FromMinutes(3), 4, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(2), UserBId),
-        [Q5Id] = (TimeSpan.FromMinutes(5), 2, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(4), UserBId),
-    };
+    // ── Load result (populated in InitSimulation) ────────────
+    private SimulationLoadResult _load = null!;
 
-    private static readonly Dictionary<Guid, int> Wave1 = new() { [Q1Id]=8, [Q2Id]=6, [Q3Id]=5, [Q4Id]=7, [Q5Id]=5 };
-    private static readonly Dictionary<Guid, int> Wave2 = new() { [Q1Id]=4, [Q2Id]=3, [Q3Id]=3, [Q4Id]=4, [Q5Id]=2 };
-
-    // ── Simulation timeline ──────────────────────────────────────
-    private static readonly DateTimeOffset SimStart   = new(2026, 2, 28,  8, 50, 0, TimeSpan.Zero);
-    private static readonly DateTimeOffset Wave1Time  = new(2026, 2, 28,  9,  0, 0, TimeSpan.Zero);
-    private static readonly DateTimeOffset Wave2Time  = new(2026, 2, 28,  9,  5, 0, TimeSpan.Zero);
-    private static readonly DateTimeOffset SimEnd     = new(2026, 2, 28,  9, 50, 0, TimeSpan.Zero);
-
-    // ── Queue colors (must match frontend) ──────────────────────
-    private static readonly Dictionary<Guid, string> QueueColors = new()
-    {
-        [Q1Id] = "#e74c3c",
-        [Q2Id] = "#3498db",
-        [Q3Id] = "#2ecc71",
-        [Q4Id] = "#f39c12",
-        [Q5Id] = "#9b59b6",
-    };
-
-    // ── Live simulation state ────────────────────────────────────
+    // ── Live simulation state ────────────────────────────────
     private SimulationState         _state      = null!;
     private EventQueue              _eventQueue = null!;
     private SimulationClock         _clock      = null!;
     private Worker                  _worker     = null!;
     private SimulatorConfiguration  _config     = SimulatorConfiguration.FastTest;
 
-    // ── Control ──────────────────────────────────────────────────
-    private CancellationTokenSource _cts        = new();
+    // ── Control ──────────────────────────────────────────────
+    private CancellationTokenSource _cts      = new();
     private Task?                   _runTask;
-    private bool                    _wave1Done;
-    private bool                    _wave2Done;
+    private int                     _nextWaveIndex;
     private bool                    _isRunning;
     private bool                    _isFinished;
-    private double                  _speed      = 60.0;   // sim-seconds per real-second
+    private double                  _speed = 60.0;
 
-    // ── Gantt tracking ───────────────────────────────────────────
+    // ── Gantt tracking ───────────────────────────────────────
     private readonly List<GanttBlockDto>         _completedBlocks = new();
     private readonly Dictionary<Guid, OpenBlock> _openBlocks      = new();
 
-    // ── Event log ────────────────────────────────────────────────
-    private readonly Queue<string> _eventLog     = new();
-    private const int MaxLogEntries               = 100;
+    // ── Event log ────────────────────────────────────────────
+    private readonly Queue<string> _eventLog    = new();
+    private const int MaxLogEntries              = 100;
 
-    // ── Metrics ──────────────────────────────────────────────────
+    // ── Metrics ──────────────────────────────────────────────
     private readonly Dictionary<Guid, double> _utilSeconds    = new();
     private readonly Dictionary<Guid, int>    _tasksCompleted = new();
 
-    // ── Broadcast rate-limiting ──────────────────────────────────
+    // ── Instance-level name + colour maps ───────────────────
+    private Dictionary<Guid, string> _names       = new();
+    private Dictionary<Guid, string> _queueColors = new();
+
+    // ── Broadcast rate-limiting ──────────────────────────────
     private DateTime _lastBroadcast = DateTime.MinValue;
 
-    // ── Izzi call counter (set by WebLoggingCore) ────────────────
+    // ── Izzi call counter ────────────────────────────────────
     private int _izziCallCount;
 
-    // ── Internal open-block record (not sent to browser) ────────
+    // ── Internal open-block ─────────────────────────────────
     private class OpenBlock
     {
         public string  Resource  { get; set; } = "";
@@ -140,23 +108,33 @@ public class SimulationService
         public long    StartMs   { get; set; }
     }
 
-    // ════════════════════════════════════════════════════════════
-    // Constructor + Init
-    // ════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
+    // Constructor
+    // ════════════════════════════════════════════════════════
 
-    public SimulationService(IHubContext<SimulationHub> hub)
+    public SimulationService(IHubContext<SimulationHub> hub, string dataPath)
     {
-        _hub = hub;
+        _hub      = hub;
+        _dataPath = dataPath;
         InitSimulation();
     }
 
+    // ════════════════════════════════════════════════════════
+    // Initialisation (called on first load and on Reset)
+    // ════════════════════════════════════════════════════════
+
     private void InitSimulation()
     {
-        _state      = new SimulationState { Name = "WebApp-Run" };
+        // Load from Blue Prism CSVs
+        _load = BluePrismConnector.Load(_dataPath);
+
+        // Deep-clone the initial state (so Reset is always a fresh start)
+        _state      = _load.InitialState.DeepClone();
         _eventQueue = new EventQueue();
-        _clock      = new SimulationClock(SimStart);
-        _wave1Done  = false;
-        _wave2Done  = false;
+        _clock      = new SimulationClock(_load.SimStart);
+        _names      = new Dictionary<Guid, string>(_load.Names);
+
+        _nextWaveIndex = 0;
         _isRunning  = false;
         _isFinished = false;
         _completedBlocks.Clear();
@@ -166,61 +144,38 @@ public class SimulationService
         _tasksCompleted.Clear();
         _izziCallCount = 0;
 
-        // Machines — all LoggedOut at 08:50
-        foreach (var (id, name) in new[] { (M1Id,"M1"), (M2Id,"M2"), (M3Id,"M3") })
-        {
-            _state.Resources[id] = new SimResourceState
-            {
-                Id            = id,
-                Name          = name,
-                AvgLoginTime  = TimeSpan.FromSeconds(30),
-                AvgLogoutTime = TimeSpan.FromSeconds(20),
-            };
-            _utilSeconds[id] = 0;
-        }
+        // Assign queue colours in declaration order
+        int ci = 0;
+        _queueColors = _state.Queues.Values
+            .ToDictionary(q => q.Id, _ => ColorPalette[ci++ % ColorPalette.Length]);
 
-        // Queues — empty until Wave-1 at 09:00 (seeded FinishedTask so AverageTaskWorkTime = TMO)
-        foreach (var (qId, (sla, crit, setup, tmo, user)) in QDefs)
-        {
-            _state.Queues[qId] = new SimQueueState
-            {
-                Id           = qId,
-                Name         = Names[qId],
-                UserId       = user,
-                SLA          = sla,
-                Criticality  = crit,
-                AvgSetupTime = setup,
-                FinishedTasks = new List<SimFinishedTask>
-                {
-                    new SimFinishedTask
-                    {
-                        Id              = Guid.NewGuid(),
-                        QueueId         = qId,
-                        ResourceId      = Guid.NewGuid(),
-                        CompletedAt     = Wave1Time,
-                        DurationSeconds = tmo.TotalSeconds,
-                    }
-                },
-            };
-            _tasksCompleted[qId] = 0;
-        }
+        // Initialise per-resource metrics
+        foreach (var id in _state.Resources.Keys)
+            _utilSeconds[id] = 0;
+
+        // Initialise per-queue task counters
+        foreach (var id in _state.Queues.Keys)
+            _tasksCompleted[id] = 0;
 
         _config = SimulatorConfiguration.FastTest;
         var rawCore     = IzziCoreBuilder.Build(_config.IzziDiscTime);
         var loggingCore = new WebLoggingCore(rawCore, this);
         _worker = new Worker(_state, _eventQueue, _clock, _config, loggingCore);
 
-        AddEvent($"Ready. Wave-1 @ 09:00 (Q1=8 Q2=6 Q3=5 Q4=7 Q5=5), Wave-2 @ 09:05");
+        AddEvent($"Loaded {_state.Resources.Count} bots, " +
+                 $"{_state.Queues.Count} queues, " +
+                 $"{_load.TaskWaves.Sum(w => w.Tasks.Count)} tasks " +
+                 $"in {_load.TaskWaves.Count} waves");
+        AddEvent($"Sim window: {_load.SimStart:HH:mm} → {_load.SimEnd:HH:mm}");
     }
 
-    // ════════════════════════════════════════════════════════════
-    // Control methods (called from SimulationHub)
-    // ════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
+    // Control API (called from SimulationHub)
+    // ════════════════════════════════════════════════════════
 
     public async Task StartAsync()
     {
-        if (_isRunning || _isFinished)
-            return;
+        if (_isRunning || _isFinished) return;
 
         _isRunning = true;
         _cts       = new CancellationTokenSource();
@@ -232,8 +187,7 @@ public class SimulationService
 
     public async Task PauseAsync()
     {
-        if (!_isRunning)
-            return;
+        if (!_isRunning) return;
 
         _isRunning = false;
         _cts.Cancel();
@@ -244,8 +198,7 @@ public class SimulationService
 
     public async Task ResumeAsync()
     {
-        if (_isRunning || _isFinished)
-            return;
+        if (_isRunning || _isFinished) return;
 
         _isRunning = true;
         _cts       = new CancellationTokenSource();
@@ -271,56 +224,53 @@ public class SimulationService
         await BroadcastStateForce();
     }
 
-    public void SetSpeed(double multiplier)
-    {
+    public void SetSpeed(double multiplier) =>
         _speed = Math.Max(0.1, multiplier);
-    }
 
-    // ════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     // Tick loop
-    // ════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
 
     private async Task RunTickLoopAsync(CancellationToken ct)
     {
         try
         {
-            while (!ct.IsCancellationRequested && _clock.Now < SimEnd)
+            while (!ct.IsCancellationRequested && _clock.Now < _load.SimEnd)
             {
                 var tickStart = DateTime.UtcNow;
 
                 ProcessTick();
 
-                // Early exit when all work is done
-                if (_wave2Done
+                // All waves injected + queues drained + no pending events → done
+                if (_nextWaveIndex >= _load.TaskWaves.Count
                     && _state.Queues.Values.All(q => q.PendingItems.Count == 0)
                     && !_eventQueue.HasEvents)
                 {
                     _isFinished = true;
                     _isRunning  = false;
-                    AddEvent($"✓ Simulation complete — all tasks done!");
+                    AddEvent("✓ Simulation complete — all tasks done!");
                     await BroadcastStateForce();
                     return;
                 }
 
                 await BroadcastStateTick();
 
-                // Speed control: delay = 1 sim-second / speed
                 if (_speed > 0)
                 {
-                    var realDelayMs = 1000.0 / _speed;
-                    var elapsed     = (DateTime.UtcNow - tickStart).TotalMilliseconds;
-                    var remaining   = realDelayMs - elapsed;
-                    if (remaining > 1)
-                        await Task.Delay((int)remaining, ct);
+                    var delayMs = 1000.0 / _speed;
+                    var elapsed = (DateTime.UtcNow - tickStart).TotalMilliseconds;
+                    var wait    = delayMs - elapsed;
+                    if (wait > 1)
+                        await Task.Delay((int)wait, ct);
                 }
             }
         }
-        catch (OperationCanceledException) { /* normal pause */ }
+        catch (OperationCanceledException) { /* normal pause/reset */ }
         finally
         {
             _isRunning = false;
 
-            if (_clock.Now >= SimEnd && !_isFinished)
+            if (_clock.Now >= _load.SimEnd && !_isFinished)
             {
                 _isFinished = true;
                 AddEvent($"Simulation window ended at {_clock.Now:HH:mm}");
@@ -329,30 +279,34 @@ public class SimulationService
         }
     }
 
-    // ════════════════════════════════════════════════════════════
-    // Per-tick processing
-    // ════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
+    // Per-tick logic
+    // ════════════════════════════════════════════════════════
 
     private void ProcessTick()
     {
         _clock.Advance(_config.Step);   // +1 second
 
-        // Inject task waves at their scheduled times
-        if (!_wave1Done && _clock.Now >= Wave1Time)
+        // ── Inject all task waves due at or before clock.Now ────
+        while (_nextWaveIndex < _load.TaskWaves.Count
+               && _clock.Now >= _load.TaskWaves[_nextWaveIndex].At)
         {
-            InjectWave(Wave1, "WAVE-1");
-            _wave1Done = true;
-        }
-        if (!_wave2Done && _clock.Now >= Wave2Time)
-        {
-            InjectWave(Wave2, "WAVE-2");
-            _wave2Done = true;
+            var wave = _load.TaskWaves[_nextWaveIndex++];
+            foreach (var task in wave.Tasks)
+                _state.Queues[task.QueueId].PendingItems.Add(task);
+
+            var queueSummary = wave.Tasks
+                .GroupBy(t => GetName(t.QueueId))
+                .Select(g => $"{g.Key}+{g.Count()}")
+                .Aggregate((a, b) => a + " " + b);
+            AddEvent($"→ {wave.Tasks.Count} task(s) loaded [{queueSummary}]");
         }
 
-        // ── Event processing ─────────────────────────────────────
-        var snapBeforeEvents = SnapshotStates();
+        // ── Event processing ─────────────────────────────────
+        var snapBefore = SnapshotStates();
 
-        while (_eventQueue.NextTimestamp.HasValue && _eventQueue.NextTimestamp.Value <= _clock.Now)
+        while (_eventQueue.NextTimestamp.HasValue
+               && _eventQueue.NextTimestamp.Value <= _clock.Now)
         {
             foreach (var evt in _eventQueue.GetNextBatch())
             {
@@ -362,27 +316,14 @@ public class SimulationService
             }
         }
 
-        DetectTransitions(snapBeforeEvents);
+        DetectTransitions(snapBefore);
 
-        // ── Worker.Observe() (may call Izzi, then executes commands) ─
+        // ── Worker.Observe() ─────────────────────────────────
         var snapBeforeWorker = SnapshotStates();
         _worker.Observe();
         DetectTransitions(snapBeforeWorker);
 
-        // ── Update metrics ────────────────────────────────────────
         UpdateUtilization();
-    }
-
-    private void InjectWave(Dictionary<Guid, int> wave, string label)
-    {
-        AddEvent($"═══ {label} ═══");
-        foreach (var (qId, count) in wave)
-        {
-            var (sla, _, _, _, _) = QDefs[qId];
-            for (int i = 0; i < count; i++)
-                _state.Queues[qId].PendingItems.Add(MakeTask(qId, _clock.Now, sla));
-            AddEvent($"  {Names[qId]}: +{count} tasks");
-        }
     }
 
     private void RecordItemCompleted(ItemCompletedEvent ice)
@@ -390,14 +331,12 @@ public class SimulationService
         if (_tasksCompleted.ContainsKey(ice.QueueId))
             _tasksCompleted[ice.QueueId]++;
 
-        var res = Names.TryGetValue(ice.ResourceId, out var rn) ? rn : "?";
-        var q   = Names.TryGetValue(ice.QueueId,    out var qn) ? qn : "?";
-        AddEvent($"✓ {res} completed {q} item");
+        AddEvent($"✓ {GetName(ice.ResourceId)} completed {GetName(ice.QueueId)} item");
     }
 
-    // ════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     // Gantt block tracking
-    // ════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
 
     private Dictionary<Guid, (string State, Guid? QueueId)> SnapshotStates() =>
         _state.Resources.ToDictionary(
@@ -412,37 +351,35 @@ public class SimulationService
             if (res.CurrentState == prev.State && res.CurrentQueueId == prev.QueueId)
                 continue;
 
-            // Log transition
-            var resName  = Names.TryGetValue(id, out var rn) ? rn : "?";
-            var prevQ    = prev.QueueId.HasValue && Names.TryGetValue(prev.QueueId.Value, out var pq) ? $"({pq})" : "";
-            var currQ    = res.CurrentQueueId.HasValue && Names.TryGetValue(res.CurrentQueueId.Value, out var cq) ? $"({cq})" : "";
+            var resName = GetName(id);
+            var prevQ   = prev.QueueId.HasValue   ? $"({GetName(prev.QueueId.Value)})"  : "";
+            var currQ   = res.CurrentQueueId.HasValue ? $"({GetName(res.CurrentQueueId.Value)})" : "";
             AddEvent($"  {resName}: {prev.State}{prevQ} → {res.CurrentState}{currQ}");
 
-            // Close open block
-            if (_openBlocks.TryGetValue(id, out var openBlock))
+            // Close current open block
+            if (_openBlocks.TryGetValue(id, out var ob))
             {
                 _completedBlocks.Add(new GanttBlockDto
                 {
-                    Resource  = openBlock.Resource,
-                    BlockType = openBlock.BlockType,
-                    Queue     = openBlock.Queue,
-                    Color     = openBlock.Color,
-                    StartMs   = openBlock.StartMs,
+                    Resource  = ob.Resource,
+                    BlockType = ob.BlockType,
+                    Queue     = ob.Queue,
+                    Color     = ob.Color,
+                    StartMs   = ob.StartMs,
                     EndMs     = _clock.Now.ToUnixTimeMilliseconds(),
                 });
                 _openBlocks.Remove(id);
             }
 
-            // Open new block (only for states with visual representation)
+            // Open new block
             var blockType = GetBlockType(res.CurrentState);
             if (blockType is not null)
             {
-                var queueName = res.CurrentQueueId.HasValue && Names.TryGetValue(res.CurrentQueueId.Value, out var qn) ? qn : null;
                 _openBlocks[id] = new OpenBlock
                 {
                     Resource  = resName,
                     BlockType = blockType,
-                    Queue     = queueName,
+                    Queue     = res.CurrentQueueId.HasValue ? GetName(res.CurrentQueueId.Value) : null,
                     Color     = GetBlockColor(res.CurrentState, res.CurrentQueueId),
                     StartMs   = _clock.Now.ToUnixTimeMilliseconds(),
                 };
@@ -463,19 +400,17 @@ public class SimulationService
     {
         return state switch
         {
-            SimResourceState.LoggingIn or SimResourceState.LoggingOut =>
-                "#7f8c8d",
-            SimResourceState.SettingUpQueue when queueId.HasValue && QueueColors.TryGetValue(queueId.Value, out var c) =>
-                LightenHex(c),
-            SimResourceState.Working when queueId.HasValue && QueueColors.TryGetValue(queueId.Value, out var c) =>
-                c,
+            SimResourceState.LoggingIn  or SimResourceState.LoggingOut => "#7f8c8d",
+            SimResourceState.SettingUpQueue
+                when queueId.HasValue && _queueColors.TryGetValue(queueId.Value, out var c) => LightenHex(c),
+            SimResourceState.Working
+                when queueId.HasValue && _queueColors.TryGetValue(queueId.Value, out var c) => c,
             _ => "#555"
         };
     }
 
     private static string LightenHex(string hex)
     {
-        // Mix with white at 50% for "setup" variant
         if (hex.Length == 7 && hex[0] == '#')
         {
             int r = (Convert.ToInt32(hex[1..3], 16) + 220) / 2;
@@ -486,9 +421,9 @@ public class SimulationService
         return hex;
     }
 
-    // ════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     // Metrics
-    // ════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
 
     private void UpdateUtilization()
     {
@@ -499,14 +434,13 @@ public class SimulationService
         }
     }
 
-    // ════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     // Event log
-    // ════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
 
     private void AddEvent(string msg)
     {
-        var entry = $"[{_clock.Now:HH:mm:ss}] {msg}";
-        _eventLog.Enqueue(entry);
+        _eventLog.Enqueue($"[{_clock.Now:HH:mm:ss}] {msg}");
         while (_eventLog.Count > MaxLogEntries)
             _eventLog.Dequeue();
     }
@@ -517,29 +451,34 @@ public class SimulationService
         AddEvent($"⚡ IZZI #{n}: {summary}");
     }
 
-    // ════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     // State DTO + broadcasting
-    // ════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
 
     private SimStateDto BuildStateDto()
     {
-        var elapsedSec = Math.Max(1.0, (_clock.Now - SimStart).TotalSeconds);
+        var elapsedSec = Math.Max(1.0, (_clock.Now - _load.SimStart).TotalSeconds);
+        var nowMs      = _clock.Now.ToUnixTimeMilliseconds();
 
+        // Resources
         var resources = _state.Resources.Values.Select(r =>
         {
-            var user  = r.CurrentUserId.HasValue  && Names.TryGetValue(r.CurrentUserId.Value,  out var u) ? u : null;
-            var queue = r.CurrentQueueId.HasValue && Names.TryGetValue(r.CurrentQueueId.Value, out var q) ? q : null;
-            return new ResourceDto(r.Name, r.CurrentState, queue, user);
+            var user      = r.CurrentUserId.HasValue  ? GetName(r.CurrentUserId.Value)  : null;
+            var queueName = r.CurrentQueueId.HasValue ? GetName(r.CurrentQueueId.Value) : null;
+            var queueColor = r.CurrentQueueId.HasValue && _queueColors.TryGetValue(r.CurrentQueueId.Value, out var c) ? c : null;
+            return new ResourceDto(r.Name, r.CurrentState, queueName, user, queueColor);
         }).ToList();
 
+        // Queues
         var queues = _state.Queues.Values.Select(q =>
-            new QueueDto(q.Name, q.PendingItems.Count, _tasksCompleted.GetValueOrDefault(q.Id))
-        ).ToList();
+        {
+            var color = _queueColors.TryGetValue(q.Id, out var c) ? c : "#555";
+            return new QueueDto(q.Name, q.PendingItems.Count, _tasksCompleted.GetValueOrDefault(q.Id), color);
+        }).ToList();
 
-        // Gantt: completed blocks + current open blocks extended to clock.Now
-        var nowMs  = _clock.Now.ToUnixTimeMilliseconds();
+        // Gantt (completed + in-progress blocks)
         var blocks = new List<GanttBlockDto>(_completedBlocks);
-        foreach (var (id, ob) in _openBlocks)
+        foreach (var (_, ob) in _openBlocks)
         {
             blocks.Add(new GanttBlockDto
             {
@@ -554,63 +493,57 @@ public class SimulationService
 
         // Metrics
         var elapsedHours = elapsedSec / 3600.0;
-        var tph = _tasksCompleted.ToDictionary(
-            kv => Names[kv.Key],
-            kv => Math.Round(kv.Value / elapsedHours, 1));
+        var tph  = _tasksCompleted.ToDictionary(kv => GetName(kv.Key), kv => Math.Round(kv.Value / elapsedHours, 1));
+        var util = _utilSeconds.ToDictionary  (kv => GetName(kv.Key), kv => Math.Round(kv.Value / elapsedSec * 100.0, 1));
 
-        var util = _utilSeconds.ToDictionary(
-            kv => Names[kv.Key],
-            kv => Math.Round(kv.Value / elapsedSec * 100.0, 1));
+        // Queue colour map for JS
+        var qColors = _state.Queues.Values.ToDictionary(
+            q => q.Name,
+            q => _queueColors.TryGetValue(q.Id, out var c) ? c : "#555");
 
         return new SimStateDto(
-            Clock:      _clock.Now.ToString("HH:mm:ss"),
-            ClockMs:    nowMs,
-            StartMs:    SimStart.ToUnixTimeMilliseconds(),
-            EndMs:      SimEnd.ToUnixTimeMilliseconds(),
-            IsRunning:  _isRunning,
-            IsFinished: _isFinished,
-            Speed:      _speed,
-            Resources:  resources,
-            Queues:     queues,
+            Clock:       _clock.Now.ToString("HH:mm:ss"),
+            ClockMs:     nowMs,
+            StartMs:     _load.SimStart.ToUnixTimeMilliseconds(),
+            EndMs:       _load.SimEnd.ToUnixTimeMilliseconds(),
+            IsRunning:   _isRunning,
+            IsFinished:  _isFinished,
+            Speed:       _speed,
+            Resources:   resources,
+            Queues:      queues,
             GanttBlocks: blocks,
-            Events:     _eventLog.TakeLast(50).Reverse().ToList(),
-            Metrics:    new MetricsDto(tph, util)
-        );
+            Events:      _eventLog.TakeLast(50).Reverse().ToList(),
+            Metrics:     new MetricsDto(tph, util),
+            QueueColors: qColors);
     }
 
-    /// <summary>Rate-limited broadcast — called from tick loop (max ~60 fps).</summary>
     private async Task BroadcastStateTick()
     {
         var now = DateTime.UtcNow;
-        if ((now - _lastBroadcast).TotalMilliseconds < 16)
-            return;
+        if ((now - _lastBroadcast).TotalMilliseconds < 16) return;
         _lastBroadcast = now;
         await _hub.Clients.All.SendAsync("StateUpdate", BuildStateDto());
     }
 
-    /// <summary>Force broadcast — for control events (start/pause/reset/finish).</summary>
     public async Task BroadcastStateForce()
     {
         _lastBroadcast = DateTime.UtcNow;
         await _hub.Clients.All.SendAsync("StateUpdate", BuildStateDto());
     }
 
-    /// <summary>Sends current state to a single caller (on connect).</summary>
-    public async Task BroadcastStateToClient(IClientProxy client)
-    {
+    public async Task BroadcastStateToClient(IClientProxy client) =>
         await client.SendAsync("StateUpdate", BuildStateDto());
-    }
 
-    // ════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     // Helpers
-    // ════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
 
-    private static SimTask MakeTask(Guid queueId, DateTimeOffset createdAt, TimeSpan sla) =>
-        new SimTask { Id = Guid.NewGuid(), QueueId = queueId, CreatedAt = createdAt, SLADeadline = createdAt + sla };
+    private string GetName(Guid id) =>
+        _names.TryGetValue(id, out var n) ? n : id.ToString()[..8];
 
-    // ════════════════════════════════════════════════════════════
-    // IzziCore wrapper — logs each Izzi call to event log
-    // ════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
+    // IzziCore logging wrapper
+    // ════════════════════════════════════════════════════════
 
     private class WebLoggingCore : IIzziCore
     {
@@ -631,14 +564,12 @@ public class SimulationService
             _n++;
             var result = _inner.Run(resources, queues).ToList();
 
-            string Nm(Guid id) => Names.TryGetValue(id, out var v) ? v : id.ToString()[..8];
-
             var cmds = result.Count == 0
                 ? "(no commands)"
                 : string.Join(", ", result.Select(c =>
                 {
                     var pop = (PopulatedResource)c.Resource;
-                    return $"{Nm(c.Resource.Id)}→{Nm(pop.Queue.Id)}";
+                    return $"{_svc.GetName(c.Resource.Id)}→{_svc.GetName(pop.Queue.Id)}";
                 }));
 
             _svc.OnIzziCall(_n, $"res={resources.Count} q={queues.Count}: {cmds}");

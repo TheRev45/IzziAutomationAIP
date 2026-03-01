@@ -1,12 +1,10 @@
 'use strict';
 
 // ═══════════════════════════════════════════════════════════
-// Constants
+// Dynamic queue colours (populated on first StateUpdate)
 // ═══════════════════════════════════════════════════════════
 
-const Q_COLORS = {
-    Q1: '#e74c3c', Q2: '#3498db', Q3: '#2ecc71', Q4: '#f39c12', Q5: '#9b59b6'
-};
+let queueColors = {};
 
 // ═══════════════════════════════════════════════════════════
 // SignalR connection
@@ -62,7 +60,7 @@ document.getElementById('btn-start').addEventListener('click', async () => {
     if (!state) { await ctl('start'); return; }
     if (state.isFinished) return;
     if (state.isRunning)  return;
-    await ctl(state.clock === '08:50:00' ? 'start' : 'resume');
+    await ctl(state.clockMs === state.startMs ? 'start' : 'resume');
 });
 
 document.getElementById('btn-pause').addEventListener('click', () => ctl('pause'));
@@ -75,6 +73,7 @@ let lastState = null;
 
 function renderAll(s) {
     lastState = s;
+    queueColors = s.queueColors || {};
 
     // Clock
     document.getElementById('clock').textContent = s.clock;
@@ -89,10 +88,11 @@ function renderAll(s) {
     document.getElementById('btn-start').disabled = s.isRunning || s.isFinished;
     document.getElementById('btn-pause').disabled = !s.isRunning;
 
-    renderGantt(document.getElementById('gantt-real'), s.ganttBlocks, s.clockMs, s.startMs, s.endMs);
+    renderGantt(document.getElementById('gantt-real'), s.ganttBlocks, s.clockMs, s.startMs, s.endMs, s.resources);
     renderForecastPlaceholder(document.getElementById('gantt-forecast'), s.clockMs, s.startMs, s.endMs);
     renderMachines(s.resources);
     renderQueues(s.queues);
+    renderLegend(s.queues);
     renderEventLog(s.events);
     renderMetrics(s.metrics);
 }
@@ -101,7 +101,7 @@ function renderAll(s) {
 // Gantt chart (canvas)
 // ═══════════════════════════════════════════════════════════
 
-function renderGantt(canvas, blocks, clockMs, startMs, endMs) {
+function renderGantt(canvas, blocks, clockMs, startMs, endMs, resources) {
     const dpr  = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
     if (rect.width < 10 || rect.height < 10) return;
@@ -113,7 +113,7 @@ function renderGantt(canvas, blocks, clockMs, startMs, endMs) {
     ctx.scale(dpr, dpr);
     const W = rect.width, H = rect.height;
 
-    const MACHINES   = ['M1', 'M2', 'M3'];
+    const MACHINES   = (resources || []).map(r => r.name);
     const LEFT       = 36;
     const RIGHT      = 6;
     const TOP        = 4;
@@ -252,8 +252,8 @@ function renderMachines(resources) {
                    : r.state === 'LoggedOut' ? '○'
                    : '…';
 
-        const dot  = r.queue && Q_COLORS[r.queue]
-            ? `<span class="qdot" style="background:${Q_COLORS[r.queue]}"></span>` : '';
+        const dot  = r.queueColor
+            ? `<span class="qdot" style="background:${r.queueColor}"></span>` : '';
         const user = r.user
             ? `<span style="color:#555;font-size:10px">(${r.user})</span>` : '';
 
@@ -269,7 +269,7 @@ function renderMachines(resources) {
 function renderQueues(queues) {
     const container = document.getElementById('queues');
     container.innerHTML = (queues || []).map(q => {
-        const color = Q_COLORS[q.name] || '#555';
+        const color = q.color || '#555';
         return `<div class="qrow">
             <span class="qname">
                 <span class="qdot" style="background:${color}"></span>
@@ -281,6 +281,19 @@ function renderQueues(queues) {
             </span>
         </div>`;
     }).join('');
+}
+
+let _legendBuilt = false;
+
+function renderLegend(queues) {
+    if (_legendBuilt || !queues || queues.length === 0) return;
+    _legendBuilt = true;
+    const el = document.getElementById('legend');
+    const qEntries = (queues || []).map(q =>
+        `<div class="leg"><div class="leg-swatch" style="background:${q.color}"></div>${q.name}</div>`
+    ).join('');
+    el.innerHTML = qEntries +
+        `<div class="leg"><div class="leg-swatch" style="background:#7f8c8d"></div>Login/Out</div>`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -315,7 +328,7 @@ function renderMetrics(metrics) {
     const util = document.getElementById('m-util');
 
     tph.innerHTML = Object.entries(metrics.tasksPerHour || {}).map(([name, val]) => {
-        const color = Q_COLORS[name] || '#8b949e';
+        const color = queueColors[name] || '#8b949e';
         return `<div class="mrow">
             <span class="mname"><span class="qdot" style="background:${color}"></span>${name}</span>
             <span class="mval">${val}/h</span>

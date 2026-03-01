@@ -1,0 +1,9 @@
+ident,name,keyfield,maxattempts,processname,activesessions,running,completed,pending,exceptioned,totalitems
+q0000001-0000-0000-0000-000000000001,Queue_A,CaseRef,1,Process_A,0,0,0,0,0,0
+q0000001-0000-0000-0000-000000000002,Queue_B,CaseRef,1,Process_B,0,0,0,0,0,0
+q0000001-0000-0000-0000-000000000003,Queue_C,CaseRef,1,Process_C,0,0,0,0,0,0
+q0000001-0000-0000-0000-000000000004,Queue_D,CaseRef,1,Process_D,0,0,0,0,0,0
+q0000001-0000-0000-0000-000000000005,Queue_E,CaseRef,1,Process_E,0,0,0,0,0,0
+q0000001-0000-0000-0000-000000000006,Queue_F,CaseRef,1,Process_F,0,0,0,0,0,0
+q0000001-0000-0000-0000-000000000007,Queue_G,CaseRef,1,Process_G,0,0,0,0,0,0
+q0000001-0000-0000-0000-000000000008,Queue_H,CaseRef,1,Process_H,0,0,0,0,0,0

@@ -23,6 +23,7 @@ public record SimStateDto(
     List<ResourceDto>           Resources,
     List<QueueDto>              Queues,
     List<GanttBlockDto>         GanttBlocks,
+    List<GanttBlockDto>         ForecastGanttBlocks,
     List<string>                Events,
     MetricsDto                  Metrics,
     Dictionary<string, string>  QueueColors   // queueName → hex color
@@ -98,6 +99,10 @@ public class SimulationService
     // ── Izzi call counter ────────────────────────────────────
     private int _izziCallCount;
 
+    // ── Forecast Gantt ────────────────────────────────────────
+    private volatile List<GanttBlockDto> _forecastBlocks = new();
+    private CancellationTokenSource      _forecastCts    = new();
+
     // ── Internal open-block ─────────────────────────────────
     private class OpenBlock
     {
@@ -143,6 +148,10 @@ public class SimulationService
         _utilSeconds.Clear();
         _tasksCompleted.Clear();
         _izziCallCount = 0;
+
+        _forecastBlocks = new List<GanttBlockDto>();
+        _forecastCts.Cancel();
+        _forecastCts = new CancellationTokenSource();
 
         // Assign queue colours in declaration order
         int ci = 0;
@@ -466,6 +475,175 @@ public class SimulationService
     }
 
     // ════════════════════════════════════════════════════════
+    // Forecast Gantt
+    // ════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Triggered after each real IzziCore call.
+    /// Snapshots current sim state on the tick thread, then runs a
+    /// full forecast asynchronously so it never blocks the tick loop.
+    /// </summary>
+    internal void TriggerForecast()
+    {
+        // Cancel any in-flight forecast
+        _forecastCts.Cancel();
+        _forecastCts = new CancellationTokenSource();
+        var ct = _forecastCts.Token;
+
+        // Deep-clone on the tick thread (safe — single-threaded tick loop)
+        var fState      = _state.DeepClone();
+        var fClock      = _clock.Clone();
+        var fEventQueue = _eventQueue.Clone();
+        var fWaveIndex  = _nextWaveIndex;
+
+        Task.Run(() =>
+        {
+            try
+            {
+                var blocks = RunForecastGantt(fState, fClock, fEventQueue, fWaveIndex, ct);
+                if (!ct.IsCancellationRequested)
+                    _forecastBlocks = blocks;   // atomic reference swap
+            }
+            catch { /* forecast failures are silent */ }
+        }, ct);
+    }
+
+    private List<GanttBlockDto> RunForecastGantt(
+        SimulationState   fState,
+        SimulationClock   fClock,
+        EventQueue        fEventQueue,
+        int               fWaveIndex,
+        CancellationToken ct)
+    {
+        var blocks = new List<GanttBlockDto>();
+        var open   = new Dictionary<Guid, OpenBlock>();
+
+        // Open a block for each resource that is already in an active state
+        var prev = fState.Resources.ToDictionary(
+            kv => kv.Key,
+            kv => (kv.Value.CurrentState, kv.Value.CurrentQueueId));
+
+        foreach (var (id, res) in fState.Resources)
+        {
+            var bt = GetBlockType(res.CurrentState);
+            if (bt is null) continue;
+            open[id] = new OpenBlock
+            {
+                Resource  = GetName(id),
+                BlockType = bt,
+                Queue     = res.CurrentQueueId.HasValue ? GetName(res.CurrentQueueId.Value) : null,
+                Color     = GetBlockColor(res.CurrentState, res.CurrentQueueId),
+                StartMs   = fClock.Now.ToUnixTimeMilliseconds(),
+            };
+        }
+
+        var fCore   = IzziCoreBuilder.Build(_config.IzziDiscTime);
+        var fWorker = new Worker(fState, fEventQueue, fClock, _config, fCore);
+
+        while (fClock.Now < _load.SimEnd && !ct.IsCancellationRequested
+               && (fEventQueue.HasEvents || fState.Queues.Values.Any(q => q.PendingItems.Count > 0)
+                   || fState.Resources.Values.Any(r => r.CurrentState != SimResourceState.LoggedOut)))
+        {
+            fClock.Advance(_config.Step);
+
+            // Inject future task waves
+            while (fWaveIndex < _load.TaskWaves.Count
+                   && fClock.Now >= _load.TaskWaves[fWaveIndex].At)
+            {
+                var wave = _load.TaskWaves[fWaveIndex++];
+                foreach (var task in wave.Tasks)
+                    fState.Queues[task.QueueId].PendingItems.Add(task);
+            }
+
+            // Process events
+            while (fEventQueue.NextTimestamp.HasValue
+                   && fEventQueue.NextTimestamp.Value <= fClock.Now)
+            {
+                foreach (var evt in fEventQueue.GetNextBatch())
+                    evt.Apply(fState, fEventQueue);
+            }
+
+            // Detect event-driven transitions
+            var afterEvents = fState.Resources.ToDictionary(
+                kv => kv.Key,
+                kv => (kv.Value.CurrentState, kv.Value.CurrentQueueId));
+            DetectForecastTransitions(prev, afterEvents, fClock, blocks, open);
+            prev = afterEvents;
+
+            // Worker.Observe() (may change states via command execution)
+            var beforeWorker = fState.Resources.ToDictionary(
+                kv => kv.Key,
+                kv => (kv.Value.CurrentState, kv.Value.CurrentQueueId));
+            fWorker.Observe();
+            var afterWorker = fState.Resources.ToDictionary(
+                kv => kv.Key,
+                kv => (kv.Value.CurrentState, kv.Value.CurrentQueueId));
+            DetectForecastTransitions(beforeWorker, afterWorker, fClock, blocks, open);
+            prev = afterWorker;
+        }
+
+        // Close any still-open blocks at end of forecast
+        var endMs = fClock.Now.ToUnixTimeMilliseconds();
+        foreach (var (_, ob) in open)
+        {
+            blocks.Add(new GanttBlockDto
+            {
+                Resource  = ob.Resource,
+                BlockType = ob.BlockType,
+                Queue     = ob.Queue,
+                Color     = ob.Color,
+                StartMs   = ob.StartMs,
+                EndMs     = endMs,
+            });
+        }
+
+        return blocks;
+    }
+
+    private void DetectForecastTransitions(
+        Dictionary<Guid, (string State, Guid? QueueId)> prev,
+        Dictionary<Guid, (string State, Guid? QueueId)> curr,
+        SimulationClock clock,
+        List<GanttBlockDto> blocks,
+        Dictionary<Guid, OpenBlock> open)
+    {
+        var nowMs = clock.Now.ToUnixTimeMilliseconds();
+        foreach (var id in prev.Keys)
+        {
+            var p = prev[id];
+            var c = curr[id];
+            if (p.State == c.State && p.QueueId == c.QueueId) continue;
+
+            if (open.TryGetValue(id, out var ob))
+            {
+                blocks.Add(new GanttBlockDto
+                {
+                    Resource  = ob.Resource,
+                    BlockType = ob.BlockType,
+                    Queue     = ob.Queue,
+                    Color     = ob.Color,
+                    StartMs   = ob.StartMs,
+                    EndMs     = nowMs,
+                });
+                open.Remove(id);
+            }
+
+            var bt = GetBlockType(c.State);
+            if (bt is not null)
+            {
+                open[id] = new OpenBlock
+                {
+                    Resource  = GetName(id),
+                    BlockType = bt,
+                    Queue     = c.QueueId.HasValue ? GetName(c.QueueId.Value) : null,
+                    Color     = GetBlockColor(c.State, c.QueueId),
+                    StartMs   = nowMs,
+                };
+            }
+        }
+    }
+
+    // ════════════════════════════════════════════════════════
     // State DTO + broadcasting
     // ════════════════════════════════════════════════════════
 
@@ -516,19 +694,20 @@ public class SimulationService
             q => _queueColors.TryGetValue(q.Id, out var c) ? c : "#555");
 
         return new SimStateDto(
-            Clock:       _clock.Now.ToString("HH:mm:ss"),
-            ClockMs:     nowMs,
-            StartMs:     _load.SimStart.ToUnixTimeMilliseconds(),
-            EndMs:       _load.SimEnd.ToUnixTimeMilliseconds(),
-            IsRunning:   _isRunning,
-            IsFinished:  _isFinished,
-            Speed:       _speed,
-            Resources:   resources,
-            Queues:      queues,
-            GanttBlocks: blocks,
-            Events:      _eventLog.TakeLast(50).Reverse().ToList(),
-            Metrics:     new MetricsDto(tph, util),
-            QueueColors: qColors);
+            Clock:               _clock.Now.ToString("HH:mm:ss"),
+            ClockMs:             nowMs,
+            StartMs:             _load.SimStart.ToUnixTimeMilliseconds(),
+            EndMs:               _load.SimEnd.ToUnixTimeMilliseconds(),
+            IsRunning:           _isRunning,
+            IsFinished:          _isFinished,
+            Speed:               _speed,
+            Resources:           resources,
+            Queues:              queues,
+            GanttBlocks:         blocks,
+            ForecastGanttBlocks: _forecastBlocks,
+            Events:              _eventLog.TakeLast(50).Reverse().ToList(),
+            Metrics:             new MetricsDto(tph, util),
+            QueueColors:         qColors);
     }
 
     private async Task BroadcastStateTick()
@@ -587,6 +766,7 @@ public class SimulationService
                 }));
 
             _svc.OnIzziCall(_n, $"res={resources.Count} q={queues.Count}: {cmds}");
+            _svc.TriggerForecast();
             return result;
         }
     }

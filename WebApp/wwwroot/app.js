@@ -89,7 +89,8 @@ function renderAll(s) {
     document.getElementById('btn-pause').disabled = !s.isRunning;
 
     renderGantt(document.getElementById('gantt-real'), s.ganttBlocks, s.clockMs, s.startMs, s.endMs, s.resources);
-    renderForecastPlaceholder(document.getElementById('gantt-forecast'), s.clockMs, s.startMs, s.endMs);
+    renderGantt(document.getElementById('gantt-forecast'), s.forecastGanttBlocks || [], s.clockMs, s.startMs, s.endMs, s.resources);
+    shadeForecastPast(document.getElementById('gantt-forecast'), s.clockMs, s.startMs, s.endMs);
     renderMachines(s.resources);
     renderQueues(s.queues);
     renderLegend(s.queues);
@@ -200,39 +201,26 @@ function renderGantt(canvas, blocks, clockMs, startMs, endMs, resources) {
     ctx.strokeRect(LEFT, TOP, chartW, H - TOP - BOTTOM);
 }
 
-function renderForecastPlaceholder(canvas, clockMs, startMs, endMs) {
-    const dpr  = window.devicePixelRatio || 1;
+// Overlay the "past" region (left of Now) with a dark tint in the forecast pane,
+// making it visually clear that blocks only appear in the future portion.
+function shadeForecastPast(canvas, clockMs, startMs, endMs) {
     const rect = canvas.getBoundingClientRect();
     if (rect.width < 10 || rect.height < 10) return;
 
-    canvas.width  = rect.width  * dpr;
-    canvas.height = rect.height * dpr;
+    const LEFT      = 36;
+    const TOP       = 4;
+    const BOTTOM    = 18;
+    const chartW    = rect.width - LEFT - 6;
+    const totalMs   = endMs - startMs;
+    const pastMs    = Math.max(0, Math.min(clockMs - startMs, totalMs));
+    const pastWidth = pastMs / totalMs * chartW;
+
+    if (pastWidth <= 0) return;
 
     const ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-    const W = rect.width, H = rect.height;
-
-    ctx.fillStyle = '#0d1117';
-    ctx.fillRect(0, 0, W, H);
-
-    // Subtle grid to hint future structure
-    ctx.strokeStyle = '#161b22';
-    ctx.lineWidth = 1;
-    for (let x = 36; x < W - 6; x += (W - 42) / 8) {
-        ctx.beginPath(); ctx.moveTo(x, 4); ctx.lineTo(x, H - 18); ctx.stroke();
-    }
-
-    ctx.fillStyle = '#30363d';
-    ctx.font = '13px Consolas';
-    ctx.textAlign = 'center';
-    ctx.fillText('Forecast — coming soon', W / 2, H / 2 - 8);
-    ctx.font = '10px Consolas';
-    ctx.fillStyle = '#21262d';
-    ctx.fillText('Will show IzziForecast projected Gantt', W / 2, H / 2 + 10);
-
-    ctx.strokeStyle = '#21262d';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(36, 4, W - 42, H - 22);
+    // renderGantt already called ctx.scale(dpr, dpr); coordinates are CSS pixels
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(LEFT, TOP, pastWidth, rect.height - TOP - BOTTOM);
 }
 
 // ═══════════════════════════════════════════════════════════

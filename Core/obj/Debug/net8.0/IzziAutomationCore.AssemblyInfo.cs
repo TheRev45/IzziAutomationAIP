@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("IzziAutomationCore")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+df7807de6973fb66f6ef428f82484beefca0e7bf")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+640b326a958c9de6ea1f4671eb27576be6c45dac")]
 [assembly: System.Reflection.AssemblyProductAttribute("IzziAutomationCore")]
 [assembly: System.Reflection.AssemblyTitleAttribute("IzziAutomationCore")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

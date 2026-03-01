@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Izzi Automation Dashboard</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Consolas', 'Courier New', monospace; background: #0d1117; color: #c9d1d9; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+
+/* ── TOP BAR ───────────────────────────────── */
+#topbar {
+    display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    padding: 8px 16px; background: #161b22; border-bottom: 1px solid #30363d;
+    height: 52px;
+}
+#clock { font-size: 26px; font-weight: bold; color: #58a6ff; min-width: 90px; letter-spacing: 1px; }
+.sep { width: 1px; height: 28px; background: #30363d; flex-shrink: 0; }
+.btn {
+    padding: 6px 14px; border: 1px solid #30363d; border-radius: 6px;
+    background: #21262d; color: #c9d1d9; cursor: pointer;
+    font-family: inherit; font-size: 13px; transition: background .15s;
+}
+.btn:hover { background: #30363d; }
+.btn.active { background: #1f6feb; color: #fff; border-color: #388bfd; }
+.btn:disabled { opacity: .4; cursor: default; }
+#speed-label { color: #8b949e; font-size: 13px; min-width: 80px; }
+#status {
+    margin-left: auto; padding: 4px 14px; border-radius: 12px;
+    font-size: 12px; font-weight: bold; letter-spacing: .5px;
+}
+.s-idle    { background: #21262d; color: #8b949e; }
+.s-running { background: #1f4d2e; color: #3fb950; }
+.s-paused  { background: #3d2a00; color: #d29922; }
+.s-done    { background: #2d2040; color: #bc8cff; }
+
+/* ── MAIN GRID ─────────────────────────────── */
+#main {
+    display: grid;
+    grid-template-columns: 1fr 210px;
+    grid-template-rows: 1fr;
+    flex: 1; min-height: 0; gap: 0;
+}
+#left { display: flex; flex-direction: column; min-height: 0; }
+
+/* ── GANTT SECTION ─────────────────────────── */
+#gantt-row {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 1px; background: #30363d;
+    flex: 1; min-height: 0;
+}
+.gantt-pane {
+    background: #0d1117; padding: 10px 12px;
+    display: flex; flex-direction: column; min-height: 0;
+}
+.pane-title {
+    font-size: 11px; color: #8b949e; text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 6px; flex-shrink: 0;
+}
+canvas.gantt { flex: 1; min-height: 0; width: 100%; display: block; }
+
+/* ── BOTTOM ROW ─────────────────────────────── */
+#bottom-row {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 1px; background: #30363d;
+    height: 190px; flex-shrink: 0;
+}
+.panel { background: #0d1117; padding: 10px 14px; overflow: hidden; display: flex; flex-direction: column; }
+.panel-title { font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; flex-shrink: 0; }
+
+/* ── EVENT LOG ──────────────────────────────── */
+#event-log {
+    flex: 1; overflow-y: auto; font-size: 11px; line-height: 1.65;
+}
+#event-log .ev       { color: #8b949e; }
+#event-log .ev-izzi  { color: #58a6ff; font-weight: bold; }
+#event-log .ev-done  { color: #3fb950; }
+#event-log .ev-wave  { color: #d29922; font-weight: bold; }
+#event-log .ev-ctrl  { color: #79c0ff; }
+
+/* ── METRICS ────────────────────────────────── */
+#metrics-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; overflow: hidden; }
+.metric-group h4 { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+.mrow { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 0; }
+.mname { color: #8b949e; display: flex; align-items: center; gap: 5px; }
+.mval  { color: #58a6ff; font-weight: bold; }
+.qdot  { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+
+/* ── RIGHT PANEL ────────────────────────────── */
+#right {
+    border-left: 1px solid #30363d; background: #0d1117;
+    padding: 12px 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px;
+}
+.sec-title { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+.mcard {
+    background: #161b22; border: 1px solid #21262d; border-radius: 6px;
+    padding: 7px 10px; margin-bottom: 5px;
+}
+.mcard-name { font-size: 13px; font-weight: bold; color: #c9d1d9; }
+.mcard-state { font-size: 11px; margin-top: 2px; display: flex; align-items: center; gap: 5px; }
+.st-working   { color: #3fb950; }
+.st-idle      { color: #d29922; }
+.st-loggedout { color: #6e7681; }
+.st-transit   { color: #8b949e; }
+
+.qrow {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 5px 0; border-bottom: 1px solid #161b22; font-size: 12px;
+}
+.qrow:last-child { border-bottom: none; }
+.qname { display: flex; align-items: center; gap: 6px; }
+.qpending { font-weight: bold; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.leg { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #8b949e; }
+.leg-swatch { width: 12px; height: 9px; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ── TOP BAR ─────────────────────────────────────────────── -->
+<div id="topbar">
+    <div id="clock">--:--:--</div>
+    <div class="sep"></div>
+    <button class="btn" id="btn-start"  onclick="ctl('start')">▶ Start</button>
+    <button class="btn" id="btn-pause"  onclick="ctl('pause')">⏸ Pause</button>
+    <div class="sep"></div>
+    <button class="btn" data-speed="1"   onclick="setSpd(1)">1×</button>
+    <button class="btn" data-speed="2"   onclick="setSpd(2)">2×</button>
+    <button class="btn" data-speed="5"   onclick="setSpd(5)">5×</button>
+    <button class="btn" data-speed="10"  onclick="setSpd(10)">10×</button>
+    <button class="btn active" data-speed="60"  onclick="setSpd(60)">60×</button>
+    <button class="btn" data-speed="600" onclick="setSpd(600)">MAX</button>
+    <span id="speed-label">Speed: 60×</span>
+    <div class="sep"></div>
+    <button class="btn" onclick="ctl('reset')">↺ Reset</button>
+    <span id="status" class="s-idle">Idle</span>
+</div>
+
+<!-- ── MAIN ────────────────────────────────────────────────── -->
+<div id="main">
+
+    <!-- LEFT: Gantt + Bottom -->
+    <div id="left">
+        <div id="gantt-row">
+            <div class="gantt-pane">
+                <div class="pane-title">Digital Twin — Real Simulation</div>
+                <canvas class="gantt" id="gantt-real"></canvas>
+            </div>
+            <div class="gantt-pane">
+                <div class="pane-title">Izzi Forecast</div>
+                <canvas class="gantt" id="gantt-forecast"></canvas>
+            </div>
+        </div>
+
+        <div id="bottom-row">
+            <div class="panel">
+                <div class="panel-title">Event Log</div>
+                <div id="event-log"></div>
+            </div>
+            <div class="panel">
+                <div class="panel-title">Metrics</div>
+                <div id="metrics-grid">
+                    <div class="metric-group">
+                        <h4>Tasks / Hour</h4>
+                        <div id="m-tph"></div>
+                    </div>
+                    <div class="metric-group">
+                        <h4>Utilization</h4>
+                        <div id="m-util"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT panel -->
+    <div id="right">
+        <div>
+            <div class="sec-title">Machine States</div>
+            <div id="machines"></div>
+        </div>
+        <div>
+            <div class="sec-title">Queue Pending</div>
+            <div id="queues"></div>
+        </div>
+        <div>
+            <div class="sec-title">Legend</div>
+            <div class="legend">
+                <div class="leg"><div class="leg-swatch" style="background:#e74c3c"></div>Q1</div>
+                <div class="leg"><div class="leg-swatch" style="background:#3498db"></div>Q2</div>
+                <div class="leg"><div class="leg-swatch" style="background:#2ecc71"></div>Q3</div>
+                <div class="leg"><div class="leg-swatch" style="background:#f39c12"></div>Q4</div>
+                <div class="leg"><div class="leg-swatch" style="background:#9b59b6"></div>Q5</div>
+                <div class="leg"><div class="leg-swatch" style="background:#7f8c8d"></div>Login</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="TestRunner" />
+    <InternalsVisibleTo Include="IzziWebApp" />
   </ItemGroup>
 
 </Project>
